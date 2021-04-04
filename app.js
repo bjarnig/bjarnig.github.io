@@ -10,152 +10,142 @@ function init() {
     }
 }
 
-let osc = null;
-let filter = null;
-let isPlayingOsc = false;
+//////////////////////////////////////  Play Sample /////////////////////////////////////////
 
-function saw() {
+let audioBuffer;
 
-    console.log(" hello kids!");
+function loadSample() {
 
     init();
 
-    if (isPlayingOsc) {
-        osc.stop();
-        isPlayingOsc = false;
-    } else {
-        isPlayingOsc = true;
+    let request = new XMLHttpRequest();
+    request.open("get", 'snd.mp3', true);
+    request.responseType = "arraybuffer";
 
-        // Create the nodes
-        osc = audioContext.createOscillator();
-        filter = audioContext.createBiquadFilter();
+    request.onload = function () {
+        audioContext.decodeAudioData(request.response, function (buffer) {
+            audioBuffer = buffer;
+            alert('sample is now loaded!');
+        });
+    };
 
-        // Set the properties of the nodes
-        filter.type = 'bandpass';
-        filter.frequency.value = 200;
-
-        // choose from sawtooth, sine, square and triangle
-        osc.type = 'sawtooth';
-
-        // Connect the saw to the filter and then to the destination
-        osc.connect(filter).connect(audioContext.destination);
-
-        // Start the sound
-        osc.start(audioContext.currentTime);
-
-        // Schedule changes
-        for (let i = 0; i < 100; i++) {
-            osc.frequency.setValueAtTime(60 + i, audioContext.currentTime + i / 10);
-            filter.frequency.setValueAtTime(Math.random() * 1000, audioContext.currentTime + i / 5);
-        }
-    }
+    request.send();
 }
 
-let oscillator, tremolo, vibrato, gain, vibratoGain;
-let isPlayingMod = false;
-
-function modulation() {
-
-    if (!isPlayingMod) {
-        init();
-        isPlayingMod = true;
-
-        // Create the Oscillators
-        oscillator = audioContext.createOscillator();
-        tremolo = audioContext.createOscillator();
-        vibrato = audioContext.createOscillator();
-        gain = audioContext.createGain();
-        vibratoGain = audioContext.createGain();
-
-        // Set their values
-        oscillator.frequency.value = 400.0;
-        tremolo.frequency.value = 8.0;
-        vibrato.frequency.value = 5.0;
-        vibratoGain.gain.value = 1000;
-
-        // Connect the osciallators (from tail to head)
-        tremolo.connect(gain.gain);
-        vibrato.connect(vibratoGain);
-        vibratoGain.connect(oscillator.frequency);
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-
-        // Start the oscillators
-        oscillator.start();
-        tremolo.start();
-        vibrato.start();
-    } else {
-        // Stop the oscillator
-        oscillator.stop();
-        tremolo.stop();
-        vibrato.stop();
-        isPlayingMod = false;
-    }
-}
-
-function noise() {
+function playSample() {
 
     init();
 
-    // Create a buffer
-    let node = audioContext.createBufferSource();
-    let buffer = audioContext.createBuffer(1, 4096, audioContext.sampleRate);
-
-    // Get a handle of the buffer
-    let data = buffer.getChannelData(0);
-
-    // loop through the buffer size and fill the buffer with random numbers
-    for (let i = 0; i < 4096; i++) {
-        data[i] = Math.random();
+    if (!audioBuffer) {
+        alert('there is no audio buffer!');
     }
 
-    // attach the buffer to the node with the loop option as true
-    node.buffer = buffer;
-    node.loop = true;
-
-    // connect to destination
-    node.connect(audioContext.destination);
-
-    // start the noise
-    node.start(audioContext.currentTime);
-
-    // stop it after one second
-    node.stop(audioContext.currentTime + 2);
+    let sound = audioContext.createBufferSource();
+    sound.buffer = audioBuffer;
+    sound.playbackRate.value = 10 * Math.random();
+    sound.connect(audioContext.destination);
+    sound.start(audioContext.currentTime);
 }
 
-function additive() {
+
+///////////////////////////////////  Impulse Response  //////////////////////////////////////
+
+let impulseBuffer;
+
+function loadImpulse() {
 
     init();
 
-    // use arrays for many oscillators and gains
-    let oscillators = [];
-    let amplifiers = [];
-    let times = 50;
+    let request = new XMLHttpRequest();
+    request.open("get", 'https://bjarnig.s3.eu-central-1.amazonaws.com/sounds/impulse.wav', true);
+    request.responseType = "arraybuffer";
 
-    for(let i = 0; i < times; i++) {
-        oscillators[i] = audioContext.createOscillator();
-        amplifiers[i] = audioContext.createGain();
+    request.onload = function () {
+        audioContext.decodeAudioData(request.response, function (buffer) {
+            impulseBuffer = buffer;
+            alert('impulse is now loaded!');
+        });
+    };
 
-        // Set the oscillator parameters
-        oscillators[i].frequency.value = 100 * (1 + i);
-        oscillators[i].type = 'sine';
+    request.send();
+}
 
-        // Set the amplitude
-        amplifiers[i].gain.value = 1.0 / times;
+function playConvolution() {
 
-        // Connect the oscillator to the gain and gain to the output
-        oscillators[i].connect(amplifiers[i]);
-        amplifiers[i].connect(audioContext.destination);
+    init();
 
-        // Play a sound for 2 seconds
-        oscillators[i].start();
-        oscillators[i].stop(audioContext.currentTime + 2);
+    if (!impulseBuffer) {
+        alert('there is no audio buffer!');
     }
 
+    let gain = audioContext.createGain();
+    let convolver = audioContext.createConvolver();
+    let osc = audioContext.createOscillator();
+    
+    osc.type = "sawtooth";
+    osc.frequency.value = 10;
+    convolver.buffer = impulseBuffer;
+    osc.connect(convolver);
+    convolver.connect(gain);
+    gain.gain.value = 0.75;
+    gain.connect(audioContext.destination);
+    osc.connect(audioContext.destination);
+    osc.start(audioContext.currentTime);
+}
+
+function playDelay() {
+    let source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = 10 * Math.random();
+    var delay = audioContext.createDelay();
+    delay.delayTime.value = Math.random();
+
+    var feedback = audioContext.createGain();
+    feedback.gain.value = 0.8;
+
+    delay.connect(feedback);
+    feedback.connect(delay);
+
+    source.connect(delay);
+    source.connect(audioContext.destination);
+    delay.connect(audioContext.destination);
+    source.start(audioContext.currentTime);
+}
+
+// our distortion curve function
+function makeDistortionCurve(amount) {
+    var k = typeof amount === 'number' ? amount : 50,
+        n_samples = 44100,
+        curve = new Float32Array(n_samples),
+        deg = Math.PI / 180,
+        i = 0,
+        x;
+    for (; i < n_samples; ++i) {
+        x = i * 2 / n_samples - 1;
+        curve[i] = (3 + k) * x * 20 * deg /
+            (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+}
+
+function playWaveshaping() {
+    let source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = 5 * Math.random();
+
+    var waveShaper = audioContext.createWaveShaper();
+    waveShaper.curve = makeDistortionCurve(Math.random());
+
+    // connect the nodes
+    source.connect(waveShaper);
+    waveShaper.connect(audioContext.destination);
+    source.start(audioContext.currentTime);
 }
 
 // Listen to the click event of the button
-document.getElementById("item1").addEventListener("click", saw);
-document.getElementById("item2").addEventListener("click", modulation);
-document.getElementById("item3").addEventListener("click", noise);
-document.getElementById("item4").addEventListener("click", additive);
+document.getElementById("item1").addEventListener("click", loadSample);
+document.getElementById("item2").addEventListener("click", playSample);
+document.getElementById("item3").addEventListener("click", loadImpulse);
+document.getElementById("item4").addEventListener("click", playConvolution);
+document.getElementById("item5").addEventListener("click", playDelay);
+document.getElementById("item6").addEventListener("click", playWaveshaping);
