@@ -1,22 +1,15 @@
+
 body {
-    color: white;
-    background-color: #011627;
+    padding: 0;
+    margin: 0;
+    background-color: #171b21;
 }
 
 button {
-    font-family: monospace;
-    height: 150px;
+    margin: 20px;
+    color: #42464d;
     width: 150px;
-    margin: 30px;
-    background-color: #026C7C;
-    color: #F6F7F8;
-    font-size: 16px;
-    border: 2px solid #F6F7F8;
-}
-
-#synthesis {
-    border:dashed;
-    margin:150px;
-    height:450px;
-    width:700px;
+    height: 35px;
+    font-family: "Monaco";
+    background-color: #daf3ff;
 }
