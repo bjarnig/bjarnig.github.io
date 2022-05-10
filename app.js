@@ -48,6 +48,42 @@ function curve() {
   saw(list, 5 * Math.random());
 }
 
+function noise() {
+
+  if(!audioContext) {
+      audioContext = new AudioContext();
+  }
+
+  const noise = audioContext.createBufferSource();
+  const buffer = audioContext.createBuffer(1, 4096, audioContext.sampleRate);
+  let data = buffer.getChannelData(0);
+
+  for (let i = 0; i < 4096; i++) {
+    data[i] = Math.random();
+  }
+
+  noise.buffer = buffer;
+  noise.loop = true;
+
+  let filter = audioContext.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 3000;
+  filter.Q.value = 8;
+
+  noise.connect(filter);
+  filter.connect(audioContext.destination);
+  noise.start(audioContext.currentTime);
+
+  for (var i = 0; i < 20; i++) {
+    filter.frequency.setValueAtTime( 20 + (1000 * Math.random()), audioContext.currentTime + (i * 0.3));
+  }
+
+  noise.stop(audioContext.currentTime + 4);
+
+}
+
 document.getElementById('buttonSequence').addEventListener("click", sequence);
 
 document.getElementById('buttonCurve').addEventListener("click", curve);
+
+document.getElementById('buttonNoise').addEventListener("click", noise);
